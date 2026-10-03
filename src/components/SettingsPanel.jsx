@@ -1,10 +1,53 @@
-import { useRef, useState } from "react";
-import { PRESETS, FONTS, contrast } from "../rsvp.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PRESETS, FONTS, contrast, loadFont } from "../rsvp.js";
+import { planParts, MAX_PARTS, MAX_SINGLE_SEC } from "../video.js";
 
-export default function SettingsPanel({ st, t, audio, onClose }) {
+const fmtDur = (ms) => {
+  const s = Math.round(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+};
+
+export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
   const { s, set, colors } = st;
   const fileRef = useRef();
+  // Làm nóng sẵn các phông ở nền khi mở Cài đặt
+  useEffect(() => {
+    Object.keys(FONTS).forEach((k) => loadFont(k, s.weight));
+  }, [s.weight]);
   const [badFile, setBadFile] = useState(false);
+  const n = doc ? doc.words.length : 0;
+  const [from, setFrom] = useState(1);
+  const [to, setTo] = useState(n);
+  const a = Math.min(Math.max(1, from || 1), Math.max(n, 1));
+  const b = Math.min(Math.max(a, to || n), n);
+  const plan = useMemo(
+    () => (n ? planParts(doc.words, a - 1, b, s.wpm, s.exportPartMin) : null),
+    [doc, n, a, b, s.wpm, s.exportPartMin],
+  );
+  const tooMany = plan && plan.parts.length > MAX_PARTS;
+  const tooLong =
+    plan && s.exportPartMin === 0 && plan.totalMs > MAX_SINGLE_SEC * 1000;
+  const canExport = !!plan && !tooMany && !tooLong && !exp.busy;
+  const startExport = () =>
+    exp.run({
+      words: doc.words,
+      parts: plan.parts,
+      wpm: s.wpm,
+      view: {
+        colors,
+        font: s.font,
+        weight: s.weight,
+        size: s.size,
+        sideOpacity: s.sideOpacity,
+      },
+      music:
+        s.exportAudio && audio.src
+          ? { src: audio.src, volume: s.audioVolume }
+          : null,
+    });
   const low =
     contrast(colors.bg, colors.fg) < 4.5 ||
     contrast(colors.bg, colors.accent) < 3;
@@ -120,7 +163,7 @@ export default function SettingsPanel({ st, t, audio, onClose }) {
             {Object.entries(FONTS).map(([k, [name, css]]) => (
               <button
                 key={k}
-                onClick={() => set({ font: k })}
+                onClick={() => loadFont(k, s.weight).then(() => set({ font: k }))}
                 aria-pressed={s.font === k}
                 className={`h-10 px-3 rounded-full border text-sm ${s.font === k ? "border-2" : "border-current/20 hover:bg-current/10"}`}
                 style={{
@@ -145,7 +188,7 @@ export default function SettingsPanel({ st, t, audio, onClose }) {
               ].map(([w, label]) => (
                 <button
                   key={w}
-                  onClick={() => set({ weight: w })}
+                  onClick={() => loadFont(s.font, w).then(() => set({ weight: w }))}
                   aria-pressed={s.weight === w}
                   className="flex-1 rounded-full h-8 text-sm uppercase tracking-wide cursor-pointer"
                   style={
@@ -266,6 +309,165 @@ export default function SettingsPanel({ st, t, audio, onClose }) {
             >
               {badFile ? t.audioNotAudio : t.audioErr}
             </p>
+          )}
+        </section>
+        <section className="space-y-3 pt-6 border-current/15 border-t">
+          <h3 className="font-semibold">{t.video}</h3>
+          {!doc ? (
+            <p className="opacity-60 text-sm">{t.videoNoDoc}</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <label className="flex items-center gap-2">
+                  {t.videoFrom}
+                  <input
+                    type="number"
+                    min={1}
+                    max={n}
+                    value={from}
+                    onChange={(e) => setFrom(+e.target.value)}
+                    className="bg-transparent px-2 border border-current/20 rounded-lg w-24 h-9 tabular-nums"
+                  />
+                </label>
+                <label className="flex items-center gap-2">
+                  {t.videoTo}
+                  <input
+                    type="number"
+                    min={1}
+                    max={n}
+                    value={to}
+                    onChange={(e) => setTo(+e.target.value)}
+                    className="bg-transparent px-2 border border-current/20 rounded-lg w-24 h-9 tabular-nums"
+                  />
+                </label>
+                <span className="opacity-60 tabular-nums">/ {n}</span>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm">{t.videoPart}</div>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 3, 5, 10].map((m) => (
+                    <Chip
+                      key={m}
+                      active={s.exportPartMin === m}
+                      onClick={() => set({ exportPartMin: m })}
+                    >
+                      {m} {t.videoMin}
+                    </Chip>
+                  ))}
+                  <Chip
+                    active={s.exportPartMin === 0}
+                    onClick={() => set({ exportPartMin: 0 })}
+                  >
+                    {t.videoNoSplit}
+                  </Chip>
+                </div>
+              </div>
+              {audio.src && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={s.exportAudio}
+                    onChange={(e) => set({ exportAudio: e.target.checked })}
+                    style={{ accentColor: "var(--accent)" }}
+                  />
+                  {t.videoAudio}
+                </label>
+              )}
+              {plan && (
+                <p className="opacity-70 tabular-nums text-sm">
+                  {t.videoEst}: {fmtDur(plan.totalMs)} · {plan.parts.length}{" "}
+                  {t.videoParts} · {s.wpm} WPM
+                </p>
+              )}
+              {(tooMany || tooLong) && (
+                <p
+                  role="alert"
+                  className="font-medium text-sm"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {tooMany ? t.videoTooMany : t.videoTooLong}
+                </p>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={startExport}
+                  disabled={!canExport}
+                  className="flex flex-1 justify-center items-center gap-2 enabled:hover:bg-current/10 disabled:opacity-60 border border-current/20 rounded-xl h-12 font-semibold text-sm uppercase tracking-wide enabled:cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {exp.busy ? (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        className="animate-spin"
+                        aria-hidden
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke="currentColor"
+                          opacity="0.2"
+                        />
+                        <path d="M21 12a9 9 0 0 0-9-9" stroke="var(--accent)" />
+                      </svg>
+                      {t.videoBusy} {Math.round(exp.pct * 100)}%
+                      {exp.parts > 1 && (
+                        <span className="opacity-60 normal-case">
+                          ({t.videoPartOf} {exp.part}/{exp.parts})
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden
+                      >
+                        <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+                        <rect x="2" y="6" width="14" height="12" rx="2" />
+                      </svg>
+                      {t.videoExport}
+                    </>
+                  )}
+                </button>
+                {exp.busy && (
+                  <button
+                    onClick={exp.cancel}
+                    className="hover:bg-current/10 px-4 border border-current/20 rounded-xl h-12 font-semibold text-sm uppercase cursor-pointer"
+                  >
+                    {t.videoCancel}
+                  </button>
+                )}
+              </div>
+              <p className="opacity-50 text-xs">{t.videoHint}</p>
+              {exp.err && (
+                <p
+                  role="alert"
+                  className="font-medium text-sm"
+                  style={{ color: "var(--accent)" }}
+                >
+                  {{
+                    unsupported: t.videoUnsupported,
+                    audioLoad: t.videoAudioLoad,
+                    audioUnsupported: t.videoAudioUnsupported,
+                  }[exp.err] ?? t.videoFail}
+                </p>
+              )}
+            </>
           )}
         </section>
         <section className="space-y-3 pt-6 border-current/15 border-t">

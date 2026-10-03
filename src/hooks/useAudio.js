@@ -9,7 +9,7 @@ export function useAudio(s, set) {
   if (!el.current) {
     el.current = new Audio();
     el.current.loop = true;
-    el.current.preload = "none";
+    el.current.preload = "auto"; // tải sẵn để bấm Phát là có tiếng ngay
   }
   const want = useRef(false); // Reader đang yêu cầu phát
   const [file, setFile] = useState(null); // { name, url } — file cục bộ (ưu tiên hơn URL)
@@ -86,5 +86,5 @@ export function useAudio(s, set) {
     set({ audioUrl: DEFAULT_AUDIO_URL });
   };
 
-  return { play, pause, setUrl, pickFile, reset, file, err };
+  return { play, pause, setUrl, pickFile, reset, file, err, src };
 }

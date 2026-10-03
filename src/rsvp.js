@@ -46,6 +46,11 @@ export const FONTS = {
   inter: ['Inter', "'Inter', system-ui, sans-serif"],
 }
 
+// Tải sẵn phông (cả bộ ký tự tiếng Việt) để đổi phông/độ đậm không bị nháy.
+const FONT_SAMPLE = "AaBbCc0123456789.,;:!?ĐđĂăÂâÊêÔôƠơƯưẠạẢảÃãÁáÀàẸẹẺẻẼẽÉéÈèỊịỈỉĨĩÍíÌìỌọỎỏÕõÓóÒòỤụỦủŨũÚúÙùỴỵỶỷỸỹÝý"
+export const loadFont = (key, weight = 500) =>
+  document.fonts?.load(`${weight} 64px ${(FONTS[key] ?? FONTS.be)[1]}`, FONT_SAMPLE).catch(() => {}) ?? Promise.resolve()
+
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] || 0 }
 
 // Chia 2 cột nếu có "rãnh" dọc gần như không có chữ nào cắt ngang

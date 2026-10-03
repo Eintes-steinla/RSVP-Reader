@@ -1,0 +1,70 @@
+diff --git a/src/components/SettingsPanel.jsx b/src/components/SettingsPanel.jsx
+index 9ce261b..323592e 100644
+--- a/src/components/SettingsPanel.jsx
++++ b/src/components/SettingsPanel.jsx
+@@ -1,5 +1,5 @@
+-import { useMemo, useRef, useState } from "react";
+-import { PRESETS, FONTS, contrast } from "../rsvp.js";
++import { useEffect, useMemo, useRef, useState } from "react";
++import { PRESETS, FONTS, contrast, loadFont } from "../rsvp.js";
+ import { planParts, MAX_PARTS, MAX_SINGLE_SEC } from "../video.js";
+ 
+ const fmtDur = (ms) => {
+@@ -13,6 +13,10 @@ const fmtDur = (ms) => {
+ export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
+   const { s, set, colors } = st;
+   const fileRef = useRef();
++  // Làm nóng sẵn các phông ở nền khi mở Cài đặt
++  useEffect(() => {
++    Object.keys(FONTS).forEach((k) => loadFont(k, s.weight));
++  }, [s.weight]);
+   const [badFile, setBadFile] = useState(false);
+   const n = doc ? doc.words.length : 0;
+   const [from, setFrom] = useState(1);
+@@ -158,7 +162,7 @@ export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
+             {Object.entries(FONTS).map(([k, [name, css]]) => (
+               <button
+                 key={k}
+-                onClick={() => set({ font: k })}
++                onClick={() => loadFont(k, s.weight).then(() => set({ font: k }))}
+                 aria-pressed={s.font === k}
+                 className={`h-10 px-3 rounded-full border text-sm ${s.font === k ? "border-2" : "border-current/20 hover:bg-current/10"}`}
+                 style={{
+@@ -183,7 +187,7 @@ export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
+               ].map(([w, label]) => (
+                 <button
+                   key={w}
+-                  onClick={() => set({ weight: w })}
++                  onClick={() => loadFont(s.font, w).then(() => set({ weight: w }))}
+                   aria-pressed={s.weight === w}
+                   className="flex-1 rounded-full h-8 text-sm uppercase tracking-wide cursor-pointer"
+                   style={
+diff --git a/src/hooks/useAudio.js b/src/hooks/useAudio.js
+index fb430a3..5fe3491 100644
+--- a/src/hooks/useAudio.js
++++ b/src/hooks/useAudio.js
+@@ -9,7 +9,7 @@ export function useAudio(s, set) {
+   if (!el.current) {
+     el.current = new Audio();
+     el.current.loop = true;
+-    el.current.preload = "none";
++    el.current.preload = "auto"; // tải sẵn để bấm Phát là có tiếng ngay
+   }
+   const want = useRef(false); // Reader đang yêu cầu phát
+   const [file, setFile] = useState(null); // { name, url } — file cục bộ (ưu tiên hơn URL)
+diff --git a/src/rsvp.js b/src/rsvp.js
+index dfa283c..87eb887 100644
+--- a/src/rsvp.js
++++ b/src/rsvp.js
+@@ -46,6 +46,11 @@ export const FONTS = {
+   inter: ['Inter', "'Inter', system-ui, sans-serif"],
+ }
+ 
++// Tải sẵn phông (cả bộ ký tự tiếng Việt) để đổi phông/độ đậm không bị nháy.
++const FONT_SAMPLE = "AaBbCc0123456789.,;:!?ĐđĂăÂâÊêÔôƠơƯưẠạẢảÃãÁáÀàẸẹẺẻẼẽÉéÈèỊịỈỉĨĩÍíÌìỌọỎỏÕõÓóÒòỤụỦủŨũÚúÙùỴỵỶỷỸỹÝý"
++export const loadFont = (key, weight = 500) =>
++  document.fonts?.load(`${weight} 64px ${(FONTS[key] ?? FONTS.be)[1]}`, FONT_SAMPLE).catch(() => {}) ?? Promise.resolve()
++
+ const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] || 0 }
+ 
+ // Chia 2 cột nếu có "rãnh" dọc gần như không có chữ nào cắt ngang

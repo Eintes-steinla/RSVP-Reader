@@ -14,6 +14,8 @@ const defaults = {
   audioUrl: DEFAULT_AUDIO_URL,
   audioVolume: 0.5,
   audioMuted: false,
+  exportPartMin: 5,
+  exportAudio: true,
 };
 export function useSettings() {
   const [s, setS] = useState(() => {
@@ -29,6 +31,9 @@ export function useSettings() {
         : defaults.sideOpacity;
       if (typeof v.audioUrl !== "string") v.audioUrl = defaults.audioUrl;
       v.audioMuted = v.audioMuted === true;
+      v.exportAudio = v.exportAudio !== false;
+      if (![0, 1, 3, 5, 10].includes(v.exportPartMin))
+        v.exportPartMin = defaults.exportPartMin;
       v.audioVolume = Number.isFinite(v.audioVolume)
         ? Math.min(1, Math.max(0, v.audioVolume))
         : defaults.audioVolume;

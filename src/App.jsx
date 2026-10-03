@@ -3,6 +3,7 @@ import { dict } from "./i18n.js";
 import { tokenize, FONTS } from "./rsvp.js";
 import { useSettings } from "./hooks/useSettings.js";
 import { useAudio } from "./hooks/useAudio.js";
+import { useExport } from "./hooks/useExport.js";
 import InputScreen from "./components/InputScreen.jsx";
 import Reader from "./components/Reader.jsx";
 import SettingsPanel from "./components/SettingsPanel.jsx";
@@ -11,6 +12,7 @@ export default function App() {
   const st = useSettings();
   const t = dict[st.lang];
   const audio = useAudio(st.s, st.set);
+  const exp = useExport();
   const [doc, setDoc] = useState(null); // { words, pageStarts }
   const [showSettings, setShowSettings] = useState(false);
 
@@ -197,6 +199,8 @@ export default function App() {
           st={st}
           t={t}
           audio={audio}
+          exp={exp}
+          doc={doc}
           onClose={() => setShowSettings(false)}
         />
       )}
