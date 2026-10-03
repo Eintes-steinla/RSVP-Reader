@@ -1,7 +1,10 @@
+import { useRef, useState } from "react";
 import { PRESETS, FONTS, contrast } from "../rsvp.js";
 
-export default function SettingsPanel({ st, t, onClose }) {
+export default function SettingsPanel({ st, t, audio, onClose }) {
   const { s, set, colors } = st;
+  const fileRef = useRef();
+  const [badFile, setBadFile] = useState(false);
   const low =
     contrast(colors.bg, colors.fg) < 4.5 ||
     contrast(colors.bg, colors.accent) < 3;
@@ -130,7 +133,7 @@ export default function SettingsPanel({ st, t, onClose }) {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm tracking-wide">{t.weight}:</span>
+            <span className="text-sm">{t.weight}:</span>
             <div
               role="group"
               aria-label={t.weight}
@@ -196,6 +199,74 @@ export default function SettingsPanel({ st, t, onClose }) {
             <span>{t.ghost}</span>
             <span>{t.solid}</span>
           </div>
+        </section>
+        <section className="space-y-3 pt-6 border-current/15 border-t">
+          <h3 className="flex items-center font-semibold">{t.audio}</h3>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={audio.file ? "" : s.audioUrl}
+              onChange={(e) => audio.setUrl(e.target.value)}
+              placeholder={audio.file ? audio.file.name : "https://…/music.mp3"}
+              aria-label={t.audioUrl}
+              className="flex-1 bg-transparent px-3 border border-current/20 rounded-full min-w-0 h-10 text-sm"
+            />
+            <button
+              onClick={audio.reset}
+              className="hover:bg-current/10 px-4 border border-current/20 rounded-full h-10 font-semibold text-sm uppercase cursor-pointer"
+            >
+              {t.audioReset}
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm">{t.audioLocal}</span>
+            <button
+              onClick={() => fileRef.current.click()}
+              className="hover:bg-current/10 px-4 border border-current/20 rounded-full h-10 font-semibold text-sm uppercase cursor-pointer"
+            >
+              {t.audioChoose}
+            </button>
+            {audio.file && (
+              <span className="opacity-70 text-sm truncate">
+                {audio.file.name}
+              </span>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="audio/*"
+              hidden
+              onChange={(e) => {
+                setBadFile(
+                  !audio.pickFile(e.target.files[0]) && !!e.target.files[0],
+                );
+                e.target.value = "";
+              }}
+            />
+          </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <div className="flex gap-1">
+              {t.audioVol}: <b>{Math.round(s.audioVolume * 100)}%</b>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={s.audioVolume}
+              onChange={(e) => set({ audioVolume: +e.target.value })}
+              style={{ accentColor: "var(--accent)" }}
+            />
+          </label>
+          {(audio.err || badFile) && (
+            <p
+              role="alert"
+              className="font-medium text-sm"
+              style={{ color: "var(--accent)" }}
+            >
+              {badFile ? t.audioNotAudio : t.audioErr}
+            </p>
+          )}
         </section>
         <section className="space-y-3 pt-6 border-current/15 border-t">
           <h3 className="font-semibold">{t.lang}</h3>

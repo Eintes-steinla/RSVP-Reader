@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PRESETS, FONTS } from "../rsvp.js";
+import { DEFAULT_AUDIO_URL } from "./useAudio.js";
 const KEY = "rsvp-settings-v1";
 const defaults = {
   wpm: 300,
@@ -10,6 +11,9 @@ const defaults = {
   weight: 500,
   sideOpacity: 1,
   lang: null,
+  audioUrl: DEFAULT_AUDIO_URL,
+  audioVolume: 0.5,
+  audioMuted: false,
 };
 export function useSettings() {
   const [s, setS] = useState(() => {
@@ -23,6 +27,11 @@ export function useSettings() {
       v.sideOpacity = Number.isFinite(v.sideOpacity)
         ? Math.min(1, Math.max(0.1, v.sideOpacity))
         : defaults.sideOpacity;
+      if (typeof v.audioUrl !== "string") v.audioUrl = defaults.audioUrl;
+      v.audioMuted = v.audioMuted === true;
+      v.audioVolume = Number.isFinite(v.audioVolume)
+        ? Math.min(1, Math.max(0, v.audioVolume))
+        : defaults.audioVolume;
       if (v.preset !== "auto" && v.preset !== "custom" && !PRESETS[v.preset])
         v.preset = "auto";
       return v;

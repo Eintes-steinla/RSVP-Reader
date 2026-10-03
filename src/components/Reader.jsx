@@ -4,7 +4,7 @@ import { splitWord, FONTS } from "../rsvp.js";
 import Controls from "./Controls.jsx";
 import ContextPanel from "./ContextPanel.jsx";
 
-export default function Reader({ doc, st, t, onBack }) {
+export default function Reader({ doc, st, t, audio, onBack }) {
   const { words, pageAt, paraStarts } = doc;
   const { wpm, size, font, weight, sideOpacity } = st.s;
   const r = useRSVP(words, wpm);
@@ -27,6 +27,13 @@ export default function Reader({ doc, st, t, onBack }) {
       clearTimeout(timer.current);
     } else wake();
   }, [r.playing]);
+
+  // Nhạc chạy cùng lúc với đọc, dừng khi tạm dừng/thoát
+  useEffect(() => {
+    if (r.playing) audio.play();
+    else audio.pause();
+  }, [r.playing, audio.play, audio.pause]);
+  useEffect(() => audio.pause, [audio.pause]);
 
   useEffect(() => {
     const h = (e) => {
