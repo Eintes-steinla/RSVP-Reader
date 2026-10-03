@@ -12,9 +12,9 @@ const defaults = {
   sideOpacity: 1,
   lang: null,
   audioUrl: DEFAULT_AUDIO_URL,
-  audioVolume: 0.5,
+  audioVolume: 1,
   audioMuted: false,
-  exportPartMin: 5,
+  exportPartMin: 0,
   exportAudio: true,
 };
 export function useSettings() {

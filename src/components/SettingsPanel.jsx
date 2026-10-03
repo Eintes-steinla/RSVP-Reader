@@ -163,7 +163,9 @@ export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
             {Object.entries(FONTS).map(([k, [name, css]]) => (
               <button
                 key={k}
-                onClick={() => loadFont(k, s.weight).then(() => set({ font: k }))}
+                onClick={() =>
+                  loadFont(k, s.weight).then(() => set({ font: k }))
+                }
                 aria-pressed={s.font === k}
                 className={`h-10 px-3 rounded-full border text-sm ${s.font === k ? "border-2" : "border-current/20 hover:bg-current/10"}`}
                 style={{
@@ -188,7 +190,9 @@ export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
               ].map(([w, label]) => (
                 <button
                   key={w}
-                  onClick={() => loadFont(s.font, w).then(() => set({ weight: w }))}
+                  onClick={() =>
+                    loadFont(s.font, w).then(() => set({ weight: w }))
+                  }
                   aria-pressed={s.weight === w}
                   className="flex-1 rounded-full h-8 text-sm uppercase tracking-wide cursor-pointer"
                   style={
@@ -375,8 +379,8 @@ export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
               )}
               {plan && (
                 <p className="opacity-70 tabular-nums text-sm">
-                  {t.videoEst}: {fmtDur(plan.totalMs)} · {plan.parts.length}{" "}
-                  {t.videoParts} · {s.wpm} WPM
+                  {t.videoEst}: {fmtDur(plan.totalMs)} | {plan.parts.length}{" "}
+                  {t.videoParts} | {s.wpm} WPM
                 </p>
               )}
               {(tooMany || tooLong) && (
