@@ -53,7 +53,24 @@ export default function SettingsPanel({ st, t, onClose }) {
             </svg>
           </button>
         </div>
-        <section className="space-y-3">
+        <section className="space-y-3 pt-6 border-current/15 border-t">
+          <h3 className="font-semibold">{t.reading}</h3>
+          <label className="flex flex-col gap-1 text-sm">
+            <div className="flex gap-1">
+              {t.wpm}: <b>{s.wpm} WPM</b>
+            </div>
+            <input
+              type="range"
+              min={100}
+              max={1000}
+              step={10}
+              value={s.wpm}
+              onChange={(e) => set({ wpm: +e.target.value })}
+              style={{ accentColor: "var(--accent)" }}
+            />
+          </label>
+        </section>
+        <section className="space-y-3 pt-6 border-current/15 border-t">
           <h3 className="font-semibold">{t.colors}</h3>
           <div className="flex flex-wrap gap-2">
             {["auto", ...Object.keys(PRESETS)].map((k) => (
@@ -94,7 +111,7 @@ export default function SettingsPanel({ st, t, onClose }) {
             </p>
           )}
         </section>
-        <section className="space-y-3">
+        <section className="space-y-3 pt-6 border-current/15 border-t">
           <h3 className="font-semibold">{t.font}</h3>
           <div className="flex flex-wrap gap-2">
             {Object.entries(FONTS).map(([k, [name, css]]) => (
@@ -113,7 +130,7 @@ export default function SettingsPanel({ st, t, onClose }) {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-semibold tracking-wide">{t.weight}</span>
+            <span className="text-sm tracking-wide">{t.weight}:</span>
             <div
               role="group"
               aria-label={t.weight}
@@ -127,7 +144,7 @@ export default function SettingsPanel({ st, t, onClose }) {
                   key={w}
                   onClick={() => set({ weight: w })}
                   aria-pressed={s.weight === w}
-                  className="flex-1 rounded-full h-9 text-sm uppercase tracking-wide cursor-pointer"
+                  className="flex-1 rounded-full h-8 text-sm uppercase tracking-wide cursor-pointer"
                   style={
                     s.weight === w
                       ? {
@@ -143,8 +160,21 @@ export default function SettingsPanel({ st, t, onClose }) {
               ))}
             </div>
           </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <div className="flex gap-1">
+              {t.size}: <b>{s.size}px</b>
+            </div>
+            <input
+              type="range"
+              min={24}
+              max={140}
+              value={s.size}
+              onChange={(e) => set({ size: +e.target.value })}
+              style={{ accentColor: "var(--accent)" }}
+            />
+          </label>
         </section>
-        <section className="space-y-3">
+        <section className="space-y-3 pt-6 border-current/15 border-t">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold">{t.sideOpacity}</h3>
             <span className="opacity-60 tabular-nums text-sm">
@@ -167,7 +197,7 @@ export default function SettingsPanel({ st, t, onClose }) {
             <span>{t.solid}</span>
           </div>
         </section>
-        <section className="space-y-3">
+        <section className="space-y-3 pt-6 border-current/15 border-t">
           <h3 className="font-semibold">{t.lang}</h3>
           <div className="flex gap-2">
             <Chip active={st.lang === "vi"} onClick={() => set({ lang: "vi" })}>

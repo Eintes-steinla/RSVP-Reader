@@ -149,14 +149,7 @@ export default function Reader({ doc, st, t, onBack }) {
       <div
         className={`transition-opacity duration-500 ${hidden ? "opacity-0 pointer-events-none" : "opacity-100"}`}
       >
-        <Controls
-          r={r}
-          t={t}
-          st={st}
-          total={words.length}
-          left={fmt(left)}
-          compact={ctx}
-        />
+        <Controls r={r} t={t} total={words.length} left={fmt(left)} />
         <p className="hidden sm:block opacity-50 pb-4 text-xs text-center">
           {t.keys}
         </p>

@@ -1,6 +1,5 @@
 import { Btn } from "../App.jsx";
-export default function Controls({ r, t, st, total, left, compact }) {
-  const { wpm, size } = st.s;
+export default function Controls({ r, t, total, left }) {
   return (
     <div className="pb-[max(1rem,env(safe-area-inset-bottom))] space-y-3 sm:space-y-4 mx-auto px-4 sm:px-5 w-full max-w-2xl">
       <div>
@@ -109,37 +108,6 @@ export default function Controls({ r, t, st, total, left, compact }) {
             <path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z" />
           </svg>
         </Btn>
-      </div>
-      <div
-        className={`grid grid-cols-1 min-[420px]:grid-cols-2 [@media(max-height:500px)]:grid-cols-2 gap-2 min-[420px]:gap-4 text-sm ${compact ? "max-md:hidden" : ""}`}
-      >
-        <label className="flex flex-col gap-1">
-          <div className="flex gap-1">
-            {t.wpm}: <b>{wpm} WPM</b>
-          </div>
-          <input
-            type="range"
-            min={100}
-            max={1000}
-            step={10}
-            value={wpm}
-            onChange={(e) => st.set({ wpm: +e.target.value })}
-            style={{ accentColor: "var(--accent)" }}
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <div className="flex gap-1">
-            {t.size}: <b>{size}px</b>
-          </div>
-          <input
-            type="range"
-            min={24}
-            max={140}
-            value={size}
-            onChange={(e) => st.set({ size: +e.target.value })}
-            style={{ accentColor: "var(--accent)" }}
-          />
-        </label>
       </div>
     </div>
   );
