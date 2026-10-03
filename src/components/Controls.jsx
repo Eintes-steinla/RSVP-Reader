@@ -1,5 +1,5 @@
 import { Btn } from "../App.jsx";
-export default function Controls({ r, t, total, left }) {
+export default function Controls({ r, t, total, left, onZen }) {
   return (
     <div className="pb-[max(1rem,env(safe-area-inset-bottom))] space-y-3 sm:space-y-4 mx-auto px-4 sm:px-5 w-full max-w-2xl">
       <div>
@@ -22,6 +22,27 @@ export default function Controls({ r, t, total, left }) {
       </div>
       <div className="flex justify-center items-center gap-2 sm:gap-3">
         <Btn
+          label={t.reset}
+          onClick={r.reset}
+          className="flex justify-center items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="lucide-rotate-ccw lucide preview-icon"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        </Btn>
+        <Btn
           label={t.bs}
           onClick={() => r.sentence(-1)}
           className="flex justify-center items-center"
@@ -41,9 +62,6 @@ export default function Controls({ r, t, total, left }) {
             <path d="M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z" />
             <path d="M3 20V4" />
           </svg>
-        </Btn>
-        <Btn label={t.b10} onClick={() => r.seek(r.i - 10)}>
-          −10
         </Btn>
         <button
           aria-label={r.playing ? t.pause : t.play}
@@ -84,9 +102,6 @@ export default function Controls({ r, t, total, left }) {
             </svg>
           )}
         </button>
-        <Btn label={t.f10} onClick={() => r.seek(r.i + 10)}>
-          +10
-        </Btn>
         <Btn
           label={t.fs}
           onClick={() => r.sentence(1)}
@@ -106,6 +121,29 @@ export default function Controls({ r, t, total, left }) {
           >
             <path d="M21 4v16" />
             <path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z" />
+          </svg>
+        </Btn>
+        <Btn
+          label={t.zen}
+          onClick={onZen}
+          className="flex justify-center items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="lucide lucide-maximize preview-icon"
+          >
+            <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+            <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
           </svg>
         </Btn>
       </div>

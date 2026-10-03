@@ -9,6 +9,11 @@ export default function Reader({ doc, st, t, onBack }) {
   const { wpm, size, font, weight, sideOpacity } = st.s;
   const r = useRSVP(words, wpm);
   const [ctx, setCtx] = useState(false);
+  const [zen, setZen] = useState(false);
+  const enterZen = () => {
+    setCtx(false);
+    setZen(true);
+  };
   const [show, setShow] = useState(true);
   const timer = useRef();
   const wake = () => {
@@ -46,7 +51,19 @@ export default function Reader({ doc, st, t, onBack }) {
       } else if (k === "ArrowDown") {
         e.preventDefault();
         st.set({ wpm: Math.max(100, wpm - 25) });
-      } else if (k === "Escape") onBack();
+      } else if (k === "Escape") {
+        if (zen) setZen(false);
+        else onBack();
+      } else if (
+        (k === "z" || k === "Z") &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        !e.target.closest?.('[role="dialog"]')
+      ) {
+        if (zen) setZen(false);
+        else enterZen();
+      }
       wake();
     };
     window.addEventListener("keydown", h);
@@ -62,58 +79,65 @@ export default function Reader({ doc, st, t, onBack }) {
 
   return (
     <div
-      className={`flex-1 flex flex-col ${ctx ? "pb-[50dvh] md:pb-0 md:pr-[min(24rem,45vw)]" : ""}`}
+      className={
+        zen
+          ? "fixed inset-0 z-40 flex flex-col"
+          : `flex-1 flex flex-col ${ctx ? "pb-[50dvh] md:pb-0 md:pr-[min(24rem,45vw)]" : ""}`
+      }
+      style={zen ? { background: "var(--bg)" } : undefined}
       onMouseMove={wake}
       onTouchStart={wake}
     >
-      <div
-        className={`px-4 flex items-center justify-between text-sm transition-opacity duration-500 ${hidden ? "opacity-0" : "opacity-70"}`}
-      >
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 hover:bg-current/10 px-3 rounded-full h-10"
+      {!zen && (
+        <div
+          className={`px-4 flex items-center justify-between text-sm transition-opacity duration-500 ${hidden ? "opacity-0" : "opacity-70"}`}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide-move-left lucide preview-icon"
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 hover:bg-current/10 px-3 rounded-full h-10"
           >
-            <path d="M6 8L2 12L6 16" />
-            <path d="M2 12H22" />
-          </svg>{" "}
-          {t.back}
-        </button>
-        <button
-          onClick={() => setCtx((v) => !v)}
-          className="flex items-center gap-1 hover:bg-current/10 px-3 rounded-full h-10"
-          aria-pressed={ctx}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide lucide-menu preview-icon"
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide-move-left lucide preview-icon"
+            >
+              <path d="M6 8L2 12L6 16" />
+              <path d="M2 12H22" />
+            </svg>{" "}
+            {t.back}
+          </button>
+          <button
+            onClick={() => setCtx((v) => !v)}
+            className="flex items-center gap-1 hover:bg-current/10 px-3 rounded-full h-10"
+            aria-pressed={ctx}
           >
-            <path d="M4 5h16" />
-            <path d="M4 12h16" />
-            <path d="M4 19h16" />
-          </svg>{" "}
-          {t.context}
-        </button>
-      </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-menu preview-icon"
+            >
+              <path d="M4 5h16" />
+              <path d="M4 12h16" />
+              <path d="M4 19h16" />
+            </svg>{" "}
+            {t.context}
+          </button>
+        </div>
+      )}
       <button
         onClick={r.toggle}
         className="flex flex-1 justify-center items-center min-h-[30dvh] [@media(max-height:500px)]:min-h-0 overflow-hidden cursor-pointer"
@@ -146,15 +170,49 @@ export default function Reader({ doc, st, t, onBack }) {
           </span>
         </div>
       </button>
-      <div
-        className={`transition-opacity duration-500 ${hidden ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-      >
-        <Controls r={r} t={t} total={words.length} left={fmt(left)} />
-        <p className="hidden sm:block opacity-50 pb-4 text-xs text-center">
-          {t.keys}
-        </p>
-      </div>
-      {ctx && (
+      {!zen && (
+        <div
+          className={`transition-opacity duration-500 ${hidden ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        >
+          <Controls
+            r={r}
+            t={t}
+            total={words.length}
+            left={fmt(left)}
+            onZen={enterZen}
+          />
+          <p className="hidden sm:block opacity-50 pb-4 text-xs text-center">
+            {t.keys}
+          </p>
+        </div>
+      )}
+      {zen && (
+        <button
+          onClick={() => setZen(false)}
+          aria-label={t.exitZen}
+          title={t.exitZen}
+          className={`absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] flex justify-center items-center border border-current/20 hover:bg-current/10 rounded-full w-10 h-10 transition-opacity duration-500 cursor-pointer ${hidden ? "opacity-0 pointer-events-none" : "opacity-70"}`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="lucide lucide-minimize preview-icon"
+          >
+            <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+            <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+            <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+            <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+          </svg>
+        </button>
+      )}
+      {ctx && !zen && (
         <ContextPanel
           words={words}
           pageAt={pageAt}

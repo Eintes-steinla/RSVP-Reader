@@ -35,5 +35,9 @@ export function useRSVP(words, wpm) {
     if (i >= last) setI(0);
     setPlaying((p) => !p);
   }, [i, last]);
-  return { i, seek, playing, setPlaying, toggle, sentence };
+  const reset = useCallback(() => {
+    setPlaying(false);
+    setI(0);
+  }, []);
+  return { i, seek, playing, setPlaying, toggle, sentence, reset };
 }
