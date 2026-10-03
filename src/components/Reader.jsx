@@ -6,7 +6,7 @@ import ContextPanel from "./ContextPanel.jsx";
 
 export default function Reader({ doc, st, t, onBack }) {
   const { words, pageAt, paraStarts } = doc;
-  const { wpm, size, font } = st.s;
+  const { wpm, size, font, weight, sideOpacity } = st.s;
   const r = useRSVP(words, wpm);
   const [ctx, setCtx] = useState(false);
   const [show, setShow] = useState(true);
@@ -124,7 +124,7 @@ export default function Reader({ doc, st, t, onBack }) {
           style={{
             fontSize: fs,
             fontFamily: FONTS[font]?.[1] ?? FONTS.be[1],
-            fontWeight: 500,
+            fontWeight: weight,
           }}
         >
           <span
@@ -137,9 +137,13 @@ export default function Reader({ doc, st, t, onBack }) {
             className="bottom-[-0.8em] left-1/2 absolute opacity-40 w-0.5 h-[0.45em] -translate-x-1/2"
             style={{ background: "var(--fg)" }}
           />
-          <span className="text-right">{b}</span>
+          <span className="text-right" style={{ opacity: sideOpacity }}>
+            {b}
+          </span>
           <span style={{ color: "var(--accent)" }}>{o}</span>
-          <span className="text-left">{a}</span>
+          <span className="text-left" style={{ opacity: sideOpacity }}>
+            {a}
+          </span>
         </div>
       </button>
       <div

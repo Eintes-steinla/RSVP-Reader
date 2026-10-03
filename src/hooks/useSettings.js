@@ -7,6 +7,8 @@ const defaults = {
   preset: "auto",
   custom: { ...PRESETS.paper },
   font: "be",
+  weight: 500,
+  sideOpacity: 1,
   lang: null,
 };
 export function useSettings() {
@@ -17,6 +19,10 @@ export function useSettings() {
         ...JSON.parse(localStorage.getItem(KEY) || "{}"),
       };
       if (!FONTS[v.font]) v.font = defaults.font;
+      if (v.weight !== 500 && v.weight !== 700) v.weight = defaults.weight;
+      v.sideOpacity = Number.isFinite(v.sideOpacity)
+        ? Math.min(1, Math.max(0.1, v.sideOpacity))
+        : defaults.sideOpacity;
       if (v.preset !== "auto" && v.preset !== "custom" && !PRESETS[v.preset])
         v.preset = "auto";
       return v;

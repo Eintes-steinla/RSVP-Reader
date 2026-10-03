@@ -112,6 +112,60 @@ export default function SettingsPanel({ st, t, onClose }) {
               </button>
             ))}
           </div>
+          <div className="flex items-center gap-3">
+            <span className="font-semibold tracking-wide">{t.weight}</span>
+            <div
+              role="group"
+              aria-label={t.weight}
+              className="flex flex-1 gap-1 p-1 border border-current/20 rounded-full"
+            >
+              {[
+                [500, t.weightNormal],
+                [700, t.weightBold],
+              ].map(([w, label]) => (
+                <button
+                  key={w}
+                  onClick={() => set({ weight: w })}
+                  aria-pressed={s.weight === w}
+                  className="flex-1 rounded-full h-9 text-sm uppercase tracking-wide cursor-pointer"
+                  style={
+                    s.weight === w
+                      ? {
+                          background: "var(--fg)",
+                          color: "var(--bg)",
+                          fontWeight: w,
+                        }
+                      : { opacity: 0.6, fontWeight: w }
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+        <section className="space-y-3">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold">{t.sideOpacity}</h3>
+            <span className="opacity-60 tabular-nums text-sm">
+              {+s.sideOpacity.toFixed(2)}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0.1}
+            max={1}
+            step={0.05}
+            value={s.sideOpacity}
+            onChange={(e) => set({ sideOpacity: +e.target.value })}
+            aria-label={t.sideOpacity}
+            className="w-full"
+            style={{ accentColor: "var(--accent)" }}
+          />
+          <div className="flex justify-between opacity-60 text-xs uppercase tracking-wide">
+            <span>{t.ghost}</span>
+            <span>{t.solid}</span>
+          </div>
         </section>
         <section className="space-y-3">
           <h3 className="font-semibold">{t.lang}</h3>
