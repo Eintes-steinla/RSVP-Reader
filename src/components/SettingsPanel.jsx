@@ -63,428 +63,507 @@ export default function SettingsPanel({ st, t, audio, exp, doc, onClose }) {
       {children}
     </button>
   );
+  // Bottom sheet trên điện thoại có 2 nấc: "peek" (~1/3 màn hình, vẫn thấy chữ
+  // trung tâm) và "full" (mở rộng). Kéo thanh nắm lên/xuống để đổi nấc hoặc đóng.
+  const [snap, setSnap] = useState("peek");
+  const [dragH, setDragH] = useState(null); // chiều cao (px) khi đang kéo
+  const sheet = useRef(null);
+  const drag = useRef(null);
+  const peek = snap === "peek";
+  const onDragStart = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const h0 = sheet.current.offsetHeight;
+    drag.current = {
+      y0: e.clientY,
+      h0,
+      last: e.clientY,
+      t: e.timeStamp,
+      v: 0,
+      moved: false,
+    };
+    setDragH(h0);
+  };
+  const onDragMove = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    const dt = e.timeStamp - d.t;
+    if (dt > 0) d.v = (e.clientY - d.last) / dt; // px/ms, dương = đang kéo xuống
+    d.last = e.clientY;
+    d.t = e.timeStamp;
+    if (Math.abs(e.clientY - d.y0) > 4) d.moved = true;
+    const max = window.innerHeight * 0.88;
+    setDragH(Math.min(max, Math.max(40, d.h0 - (e.clientY - d.y0))));
+  };
+  const onDragEnd = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    const vh = window.innerHeight;
+    const peekPx = Math.max(vh * 0.34, 176);
+    const fullPx = vh * 0.88;
+    const h = dragH ?? d.h0;
+    setDragH(null);
+    if (!d.moved) return setSnap((s) => (s === "peek" ? "full" : "peek")); // chạm: đổi nấc
+    if (d.v > 0.5) return peek ? onClose() : setSnap("peek"); // vuốt nhanh xuống
+    if (d.v < -0.5) return setSnap("full"); // vuốt nhanh lên
+    if (h < peekPx * 0.6) return onClose();
+    setSnap(h > (peekPx + fullPx) / 2 ? "full" : "peek");
+  };
+
   return (
     <div
-      className="z-30 fixed inset-0 flex justify-end bg-black/40"
+      className={`backdrop-in z-30 fixed inset-0 flex justify-center md:justify-end items-end md:items-stretch md:bg-black/40 md:pointer-events-auto transition-colors duration-200 ${peek ? "pointer-events-none" : "bg-black/40"}`}
       onClick={onClose}
     >
       <aside
+        ref={sheet}
         role="dialog"
         aria-label={t.settings}
         onClick={(e) => e.stopPropagation()}
-        className="pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-6 shadow-2xl p-5 w-full max-w-sm h-full overflow-y-auto overscroll-contain"
-        style={{ background: "var(--bg)" }}
+        className={`panel-in pointer-events-auto flex flex-col shadow-2xl border-t border-current/15 md:border-0 rounded-t-2xl md:rounded-none w-full md:max-w-sm h-(--sheet-h) md:h-full ${dragH === null ? "transition-[height] duration-300" : ""}`}
+        style={{
+          background: "var(--bg)",
+          "--sheet-h":
+            dragH !== null
+              ? `${dragH}px`
+              : peek
+                ? "max(34dvh, 11rem)"
+                : "88dvh",
+        }}
       >
-        <div className="flex justify-between items-center">
-          <h2 className="font-bold text-xl">{t.settings}</h2>
-          <button
-            aria-label={t.close}
-            onClick={onClose}
-            className="flex justify-center items-center hover:bg-current/10 rounded-full w-10 h-10 cursor-pointer"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-x preview-icon"
-            >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
+        <div
+          className="md:hidden flex justify-center py-3 touch-none cursor-grab shrink-0"
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
+          aria-hidden
+        >
+          <span className="bg-current/30 rounded-full w-10 h-1.5" />
         </div>
-        <section className="space-y-3 pt-6 border-current/15 border-t">
-          <h3 className="font-semibold">{t.reading}</h3>
-          <label className="flex flex-col gap-1 text-sm">
-            <div className="flex gap-1">
-              {t.wpm}: <b>{s.wpm} WPM</b>
-            </div>
-            <input
-              type="range"
-              min={100}
-              max={1000}
-              step={10}
-              value={s.wpm}
-              onChange={(e) => set({ wpm: +e.target.value })}
-              style={{ accentColor: "var(--accent)" }}
-            />
-          </label>
-        </section>
-        <section className="space-y-3 pt-6 border-current/15 border-t">
-          <h3 className="font-semibold">{t.colors}</h3>
-          <div className="flex flex-wrap gap-2">
-            {["auto", ...Object.keys(PRESETS)].map((k) => (
-              <Chip
-                key={k}
-                active={s.preset === k}
-                onClick={() =>
-                  set({
-                    preset: k,
-                    ...(k !== "auto" ? { custom: { ...PRESETS[k] } } : {}),
-                  })
-                }
-              >
-                {t.preset[k]}
-              </Chip>
-            ))}
-          </div>
-          <div className="gap-3 grid grid-cols-3 text-sm">
-            {["bg", "fg", "accent"].map((k) => (
-              <label key={k} className="flex flex-col gap-1">
-                {t[k]}
-                <input
-                  type="color"
-                  value={colors[k]}
-                  onChange={(e) => pick(k, e.target.value)}
-                  className="bg-transparent rounded w-full h-10 cursor-pointer"
-                />
-              </label>
-            ))}
-          </div>
-          {low && (
-            <p
-              role="alert"
-              className="font-medium text-sm"
-              style={{ color: "var(--accent)" }}
+        <div className="pb-[max(1.25rem,env(safe-area-inset-bottom))] flex-1 space-y-6 p-5 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="flex justify-between items-center">
+            <h2 className="font-bold text-xl">{t.settings}</h2>
+            <button
+              aria-label={t.close}
+              onClick={onClose}
+              className="flex justify-center items-center hover:bg-current/10 rounded-full w-10 h-10 cursor-pointer"
             >
-              ⚠ {t.low}
-            </p>
-          )}
-        </section>
-        <section className="space-y-3 pt-6 border-current/15 border-t">
-          <h3 className="font-semibold">{t.font}</h3>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(FONTS).map(([k, [name, css]]) => (
-              <button
-                key={k}
-                onClick={() =>
-                  loadFont(k, s.weight).then(() => set({ font: k }))
-                }
-                aria-pressed={s.font === k}
-                className={`h-10 px-3 rounded-full border text-sm ${s.font === k ? "border-2" : "border-current/20 hover:bg-current/10"}`}
-                style={{
-                  fontFamily: css,
-                  ...(s.font === k ? { borderColor: "var(--accent)" } : {}),
-                }}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-x preview-icon"
               >
-                {name}
-              </button>
-            ))}
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm">{t.weight}:</span>
-            <div
-              role="group"
-              aria-label={t.weight}
-              className="flex flex-1 gap-1 p-1 border border-current/20 rounded-full"
-            >
-              {[
-                [500, t.weightNormal],
-                [700, t.weightBold],
-              ].map(([w, label]) => (
-                <button
-                  key={w}
+          <section className="space-y-3 pt-6 border-current/15 border-t">
+            <h3 className="font-semibold">{t.reading}</h3>
+            <label className="flex flex-col gap-1 text-sm">
+              <div className="flex gap-1">
+                {t.wpm}: <b>{s.wpm} WPM</b>
+              </div>
+              <input
+                type="range"
+                min={100}
+                max={1000}
+                step={10}
+                value={s.wpm}
+                onChange={(e) => set({ wpm: +e.target.value })}
+                style={{ accentColor: "var(--accent)" }}
+              />
+            </label>
+          </section>
+          <section className="space-y-3 pt-6 border-current/15 border-t">
+            <h3 className="font-semibold">{t.colors}</h3>
+            <div className="flex flex-wrap gap-2">
+              {["auto", ...Object.keys(PRESETS)].map((k) => (
+                <Chip
+                  key={k}
+                  active={s.preset === k}
                   onClick={() =>
-                    loadFont(s.font, w).then(() => set({ weight: w }))
-                  }
-                  aria-pressed={s.weight === w}
-                  className="flex-1 rounded-full h-8 text-sm uppercase tracking-wide cursor-pointer"
-                  style={
-                    s.weight === w
-                      ? {
-                          background: "var(--fg)",
-                          color: "var(--bg)",
-                          fontWeight: w,
-                        }
-                      : { opacity: 0.6, fontWeight: w }
+                    set({
+                      preset: k,
+                      ...(k !== "auto" ? { custom: { ...PRESETS[k] } } : {}),
+                    })
                   }
                 >
-                  {label}
+                  {t.preset[k]}
+                </Chip>
+              ))}
+            </div>
+            <div className="gap-3 grid grid-cols-3 text-sm">
+              {["bg", "fg", "accent"].map((k) => (
+                <label key={k} className="flex flex-col gap-1">
+                  {t[k]}
+                  <input
+                    type="color"
+                    value={colors[k]}
+                    onChange={(e) => pick(k, e.target.value)}
+                    className="bg-transparent rounded w-full h-10 cursor-pointer"
+                  />
+                </label>
+              ))}
+            </div>
+            {low && (
+              <p
+                role="alert"
+                className="font-medium text-sm"
+                style={{ color: "var(--accent)" }}
+              >
+                ⚠ {t.low}
+              </p>
+            )}
+          </section>
+          <section className="space-y-3 pt-6 border-current/15 border-t">
+            <h3 className="font-semibold">{t.font}</h3>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(FONTS).map(([k, [name, css]]) => (
+                <button
+                  key={k}
+                  onClick={() =>
+                    loadFont(k, s.weight).then(() => set({ font: k }))
+                  }
+                  aria-pressed={s.font === k}
+                  className={`h-10 px-3 rounded-full border text-sm ${s.font === k ? "border-2" : "border-current/20 hover:bg-current/10"}`}
+                  style={{
+                    fontFamily: css,
+                    ...(s.font === k ? { borderColor: "var(--accent)" } : {}),
+                  }}
+                >
+                  {name}
                 </button>
               ))}
             </div>
-          </div>
-          <label className="flex flex-col gap-1 text-sm">
-            <div className="flex gap-1">
-              {t.size}: <b>{s.size}px</b>
+            <div className="flex items-center gap-3">
+              <span className="text-sm">{t.weight}:</span>
+              <div
+                role="group"
+                aria-label={t.weight}
+                className="flex flex-1 gap-1 p-1 border border-current/20 rounded-full"
+              >
+                {[
+                  [500, t.weightNormal],
+                  [700, t.weightBold],
+                ].map(([w, label]) => (
+                  <button
+                    key={w}
+                    onClick={() =>
+                      loadFont(s.font, w).then(() => set({ weight: w }))
+                    }
+                    aria-pressed={s.weight === w}
+                    className="flex-1 rounded-full h-8 text-sm uppercase tracking-wide cursor-pointer"
+                    style={
+                      s.weight === w
+                        ? {
+                            background: "var(--fg)",
+                            color: "var(--bg)",
+                            fontWeight: w,
+                          }
+                        : { opacity: 0.6, fontWeight: w }
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <input
-              type="range"
-              min={24}
-              max={140}
-              value={s.size}
-              onChange={(e) => set({ size: +e.target.value })}
-              style={{ accentColor: "var(--accent)" }}
-            />
-          </label>
-        </section>
-        <section className="space-y-3 pt-6 border-current/15 border-t">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold">{t.sideOpacity}</h3>
-            <span className="opacity-60 tabular-nums text-sm">
-              {+s.sideOpacity.toFixed(2)}
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0.1}
-            max={1}
-            step={0.05}
-            value={s.sideOpacity}
-            onChange={(e) => set({ sideOpacity: +e.target.value })}
-            aria-label={t.sideOpacity}
-            className="w-full"
-            style={{ accentColor: "var(--accent)" }}
-          />
-          <div className="flex justify-between opacity-60 text-xs uppercase tracking-wide">
-            <span>{t.ghost}</span>
-            <span>{t.solid}</span>
-          </div>
-        </section>
-        <section className="space-y-3 pt-6 border-current/15 border-t">
-          <h3 className="flex items-center font-semibold">{t.audio}</h3>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={audio.file ? "" : s.audioUrl}
-              onChange={(e) => audio.setUrl(e.target.value)}
-              placeholder={audio.file ? audio.file.name : "https://…/music.mp3"}
-              aria-label={t.audioUrl}
-              className="flex-1 bg-transparent px-3 border border-current/20 rounded-full min-w-0 h-10 text-sm"
-            />
-            <button
-              onClick={audio.reset}
-              className="hover:bg-current/10 px-4 border border-current/20 rounded-full h-10 font-semibold text-sm uppercase cursor-pointer"
-            >
-              {t.audioReset}
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm">{t.audioLocal}</span>
-            <button
-              onClick={() => fileRef.current.click()}
-              className="hover:bg-current/10 px-4 border border-current/20 rounded-full h-10 font-semibold text-sm uppercase cursor-pointer"
-            >
-              {t.audioChoose}
-            </button>
-            {audio.file && (
-              <span className="opacity-70 text-sm truncate">
-                {audio.file.name}
+            <label className="flex flex-col gap-1 text-sm">
+              <div className="flex gap-1">
+                {t.size}: <b>{s.size}px</b>
+              </div>
+              <input
+                type="range"
+                min={24}
+                max={140}
+                value={s.size}
+                onChange={(e) => set({ size: +e.target.value })}
+                style={{ accentColor: "var(--accent)" }}
+              />
+            </label>
+          </section>
+          <section className="space-y-3 pt-6 border-current/15 border-t">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">{t.sideOpacity}</h3>
+              <span className="opacity-60 tabular-nums text-sm">
+                {+s.sideOpacity.toFixed(2)}
               </span>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="audio/*"
-              hidden
-              onChange={(e) => {
-                setBadFile(
-                  !audio.pickFile(e.target.files[0]) && !!e.target.files[0],
-                );
-                e.target.value = "";
-              }}
-            />
-          </div>
-          <label className="flex flex-col gap-1 text-sm">
-            <div className="flex gap-1">
-              {t.audioVol}: <b>{Math.round(s.audioVolume * 100)}%</b>
             </div>
             <input
               type="range"
-              min={0}
+              min={0.1}
               max={1}
               step={0.05}
-              value={s.audioVolume}
-              onChange={(e) => set({ audioVolume: +e.target.value })}
+              value={s.sideOpacity}
+              onChange={(e) => set({ sideOpacity: +e.target.value })}
+              aria-label={t.sideOpacity}
+              className="w-full"
               style={{ accentColor: "var(--accent)" }}
             />
-          </label>
-          {(audio.err || badFile) && (
-            <p
-              role="alert"
-              className="font-medium text-sm"
-              style={{ color: "var(--accent)" }}
-            >
-              {badFile ? t.audioNotAudio : t.audioErr}
-            </p>
-          )}
-        </section>
-        <section className="space-y-3 pt-6 border-current/15 border-t">
-          <h3 className="font-semibold">{t.video}</h3>
-          {!doc ? (
-            <p className="opacity-60 text-sm">{t.videoNoDoc}</p>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <label className="flex items-center gap-2">
-                  {t.videoFrom}
-                  <input
-                    type="number"
-                    min={1}
-                    max={n}
-                    value={from}
-                    onChange={(e) => setFrom(+e.target.value)}
-                    className="bg-transparent px-2 border border-current/20 rounded-lg w-24 h-9 tabular-nums"
-                  />
-                </label>
-                <label className="flex items-center gap-2">
-                  {t.videoTo}
-                  <input
-                    type="number"
-                    min={1}
-                    max={n}
-                    value={to}
-                    onChange={(e) => setTo(+e.target.value)}
-                    className="bg-transparent px-2 border border-current/20 rounded-lg w-24 h-9 tabular-nums"
-                  />
-                </label>
-                <span className="opacity-60 tabular-nums">/ {n}</span>
+            <div className="flex justify-between opacity-60 text-xs uppercase tracking-wide">
+              <span>{t.ghost}</span>
+              <span>{t.solid}</span>
+            </div>
+          </section>
+          <section className="space-y-3 pt-6 border-current/15 border-t">
+            <h3 className="flex items-center font-semibold">{t.audio}</h3>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={audio.file ? "" : s.audioUrl}
+                onChange={(e) => audio.setUrl(e.target.value)}
+                placeholder={
+                  audio.file ? audio.file.name : "https://…/music.mp3"
+                }
+                aria-label={t.audioUrl}
+                className="flex-1 bg-transparent px-3 border border-current/20 rounded-full min-w-0 h-10 text-sm"
+              />
+              <button
+                onClick={audio.reset}
+                className="hover:bg-current/10 px-4 border border-current/20 rounded-full h-10 font-semibold text-sm uppercase cursor-pointer"
+              >
+                {t.audioReset}
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm">{t.audioLocal}</span>
+              <button
+                onClick={() => fileRef.current.click()}
+                className="hover:bg-current/10 px-4 border border-current/20 rounded-full h-10 font-semibold text-sm uppercase cursor-pointer"
+              >
+                {t.audioChoose}
+              </button>
+              {audio.file && (
+                <span className="opacity-70 text-sm truncate">
+                  {audio.file.name}
+                </span>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="audio/*"
+                hidden
+                onChange={(e) => {
+                  setBadFile(
+                    !audio.pickFile(e.target.files[0]) && !!e.target.files[0],
+                  );
+                  e.target.value = "";
+                }}
+              />
+            </div>
+            <label className="flex flex-col gap-1 text-sm">
+              <div className="flex gap-1">
+                {t.audioVol}: <b>{Math.round(s.audioVolume * 100)}%</b>
               </div>
-              <div className="space-y-2">
-                <div className="text-sm">{t.videoPart}</div>
-                <div className="flex flex-wrap gap-2">
-                  {[1, 3, 5, 10].map((m) => (
-                    <Chip
-                      key={m}
-                      active={s.exportPartMin === m}
-                      onClick={() => set({ exportPartMin: m })}
-                    >
-                      {m} {t.videoMin}
-                    </Chip>
-                  ))}
-                  <Chip
-                    active={s.exportPartMin === 0}
-                    onClick={() => set({ exportPartMin: 0 })}
-                  >
-                    {t.videoNoSplit}
-                  </Chip>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={s.audioVolume}
+                onChange={(e) => set({ audioVolume: +e.target.value })}
+                style={{ accentColor: "var(--accent)" }}
+              />
+            </label>
+            {(audio.err || badFile) && (
+              <p
+                role="alert"
+                className="font-medium text-sm"
+                style={{ color: "var(--accent)" }}
+              >
+                {badFile ? t.audioNotAudio : t.audioErr}
+              </p>
+            )}
+          </section>
+          <section className="space-y-3 pt-6 border-current/15 border-t">
+            <h3 className="font-semibold">{t.video}</h3>
+            {!doc ? (
+              <p className="opacity-60 text-sm">{t.videoNoDoc}</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <label className="flex items-center gap-2">
+                    {t.videoFrom}
+                    <input
+                      type="number"
+                      min={1}
+                      max={n}
+                      value={from}
+                      onChange={(e) => setFrom(+e.target.value)}
+                      className="bg-transparent px-2 border border-current/20 rounded-lg w-24 h-9 tabular-nums"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2">
+                    {t.videoTo}
+                    <input
+                      type="number"
+                      min={1}
+                      max={n}
+                      value={to}
+                      onChange={(e) => setTo(+e.target.value)}
+                      className="bg-transparent px-2 border border-current/20 rounded-lg w-24 h-9 tabular-nums"
+                    />
+                  </label>
+                  <span className="opacity-60 tabular-nums">/ {n}</span>
                 </div>
-              </div>
-              {audio.src && (
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={s.exportAudio}
-                    onChange={(e) => set({ exportAudio: e.target.checked })}
-                    style={{ accentColor: "var(--accent)" }}
-                  />
-                  {t.videoAudio}
-                </label>
-              )}
-              {plan && (
-                <p className="opacity-70 tabular-nums text-sm">
-                  {t.videoEst}: {fmtDur(plan.totalMs)} | {plan.parts.length}{" "}
-                  {t.videoParts} | {s.wpm} WPM
-                </p>
-              )}
-              {(tooMany || tooLong) && (
-                <p
-                  role="alert"
-                  className="font-medium text-sm"
-                  style={{ color: "var(--accent)" }}
-                >
-                  {tooMany ? t.videoTooMany : t.videoTooLong}
-                </p>
-              )}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={startExport}
-                  disabled={!canExport}
-                  className="flex flex-1 justify-center items-center gap-2 enabled:hover:bg-current/10 disabled:opacity-60 border border-current/20 rounded-xl h-12 font-semibold text-sm uppercase tracking-wide enabled:cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {exp.busy ? (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        className="animate-spin"
-                        aria-hidden
+                <div className="space-y-2">
+                  <div className="text-sm">{t.videoPart}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 3, 5, 10].map((m) => (
+                      <Chip
+                        key={m}
+                        active={s.exportPartMin === m}
+                        onClick={() => set({ exportPartMin: m })}
                       >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke="currentColor"
-                          opacity="0.2"
-                        />
-                        <path d="M21 12a9 9 0 0 0-9-9" stroke="var(--accent)" />
-                      </svg>
-                      {t.videoBusy} {Math.round(exp.pct * 100)}%
-                      {exp.parts > 1 && (
-                        <span className="opacity-60 normal-case">
-                          ({t.videoPartOf} {exp.part}/{exp.parts})
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden
-                      >
-                        <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
-                        <rect x="2" y="6" width="14" height="12" rx="2" />
-                      </svg>
-                      {t.videoExport}
-                    </>
-                  )}
-                </button>
-                {exp.busy && (
-                  <button
-                    onClick={exp.cancel}
-                    className="hover:bg-current/10 px-4 border border-current/20 rounded-xl h-12 font-semibold text-sm uppercase cursor-pointer"
-                  >
-                    {t.videoCancel}
-                  </button>
+                        {m} {t.videoMin}
+                      </Chip>
+                    ))}
+                    <Chip
+                      active={s.exportPartMin === 0}
+                      onClick={() => set({ exportPartMin: 0 })}
+                    >
+                      {t.videoNoSplit}
+                    </Chip>
+                  </div>
+                </div>
+                {audio.src && (
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={s.exportAudio}
+                      onChange={(e) => set({ exportAudio: e.target.checked })}
+                      style={{ accentColor: "var(--accent)" }}
+                    />
+                    {t.videoAudio}
+                  </label>
                 )}
-              </div>
-              <p className="opacity-50 text-xs">{t.videoHint}</p>
-              {exp.err && (
-                <p
-                  role="alert"
-                  className="font-medium text-sm"
-                  style={{ color: "var(--accent)" }}
-                >
-                  {{
-                    unsupported: t.videoUnsupported,
-                    audioLoad: t.videoAudioLoad,
-                    audioUnsupported: t.videoAudioUnsupported,
-                  }[exp.err] ?? t.videoFail}
-                </p>
-              )}
-            </>
-          )}
-        </section>
-        <section className="space-y-3 pt-6 border-current/15 border-t">
-          <h3 className="font-semibold">{t.lang}</h3>
-          <div className="flex gap-2">
-            <Chip active={st.lang === "vi"} onClick={() => set({ lang: "vi" })}>
-              Tiếng Việt
-            </Chip>
-            <Chip active={st.lang === "en"} onClick={() => set({ lang: "en" })}>
-              English
-            </Chip>
-          </div>
-        </section>
+                {plan && (
+                  <p className="opacity-70 tabular-nums text-sm">
+                    {t.videoEst}: {fmtDur(plan.totalMs)} | {plan.parts.length}{" "}
+                    {t.videoParts} | {s.wpm} WPM
+                  </p>
+                )}
+                {(tooMany || tooLong) && (
+                  <p
+                    role="alert"
+                    className="font-medium text-sm"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    {tooMany ? t.videoTooMany : t.videoTooLong}
+                  </p>
+                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={startExport}
+                    disabled={!canExport}
+                    className="flex flex-1 justify-center items-center gap-2 enabled:hover:bg-current/10 disabled:opacity-60 border border-current/20 rounded-xl h-12 font-semibold text-sm uppercase tracking-wide enabled:cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {exp.busy ? (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          className="animate-spin"
+                          aria-hidden
+                        >
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="9"
+                            stroke="currentColor"
+                            opacity="0.2"
+                          />
+                          <path
+                            d="M21 12a9 9 0 0 0-9-9"
+                            stroke="var(--accent)"
+                          />
+                        </svg>
+                        {t.videoBusy} {Math.round(exp.pct * 100)}%
+                        {exp.parts > 1 && (
+                          <span className="opacity-60 normal-case">
+                            ({t.videoPartOf} {exp.part}/{exp.parts})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden
+                        >
+                          <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+                          <rect x="2" y="6" width="14" height="12" rx="2" />
+                        </svg>
+                        {t.videoExport}
+                      </>
+                    )}
+                  </button>
+                  {exp.busy && (
+                    <button
+                      onClick={exp.cancel}
+                      className="hover:bg-current/10 px-4 border border-current/20 rounded-xl h-12 font-semibold text-sm uppercase cursor-pointer"
+                    >
+                      {t.videoCancel}
+                    </button>
+                  )}
+                </div>
+                <p className="opacity-50 text-xs">{t.videoHint}</p>
+                {exp.err && (
+                  <p
+                    role="alert"
+                    className="font-medium text-sm"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    {{
+                      unsupported: t.videoUnsupported,
+                      audioLoad: t.videoAudioLoad,
+                      audioUnsupported: t.videoAudioUnsupported,
+                    }[exp.err] ?? t.videoFail}
+                  </p>
+                )}
+              </>
+            )}
+          </section>
+          <section className="space-y-3 pt-6 border-current/15 border-t">
+            <h3 className="font-semibold">{t.lang}</h3>
+            <div className="flex gap-2">
+              <Chip
+                active={st.lang === "vi"}
+                onClick={() => set({ lang: "vi" })}
+              >
+                Tiếng Việt
+              </Chip>
+              <Chip
+                active={st.lang === "en"}
+                onClick={() => set({ lang: "en" })}
+              >
+                English
+              </Chip>
+            </div>
+          </section>
+        </div>
       </aside>
     </div>
   );
